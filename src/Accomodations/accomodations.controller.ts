@@ -20,54 +20,33 @@ export class AccommodationsController {
     try {
       return await this.accommodationsService.findAll()
     } catch (error) {
-      console.error('Erro ao buscar acomodações:', error.message)
-      throw new HttpException(
-        'Erro interno ao buscar acomodações',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      )
+      this.handleError(error, 'Erro ao buscar acomodações')
     }
   }
 
-  @Get(':id')
+  @Get('id/:id')
   async findById(@Param('id') id: string) {
     try {
-      const parsedId = Number(id) // Convertendo para número
-      if (isNaN(parsedId)) {
-        throw new HttpException('ID inválido', HttpStatus.BAD_REQUEST)
-      }
-
+      const parsedId = this.parseId(id)
       const accommodation = await this.accommodationsService.findById(parsedId)
-      if (!accommodation) {
-        throw new HttpException(
-          'Acomodação não encontrada',
-          HttpStatus.NOT_FOUND,
-        )
-      }
+      this.checkAccommodationExistence(accommodation)
 
       return accommodation
     } catch (error) {
-      console.error('Erro ao buscar acomodação:', error.message)
-      throw new HttpException(
-        'Erro interno ao buscar acomodação',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      )
+      this.handleError(error, 'Erro ao buscar acomodação')
     }
   }
 
-  @Get('search')
-  async searchByCategory(@Query('category') category: string) {
-    if (!category) {
-      throw new HttpException('Categoria não fornecida', HttpStatus.BAD_REQUEST)
+  @Get('type/:type')
+  async searchByType(@Param('type') type: string) {
+    if (!type) {
+      throw new HttpException('Tipo não fornecido', HttpStatus.BAD_REQUEST)
     }
 
     try {
-      return await this.accommodationsService.searchByCategory(category)
+      return await this.accommodationsService.searchByType(type)
     } catch (error) {
-      console.error('Erro ao buscar acomodações por categoria:', error.message)
-      throw new HttpException(
-        'Erro ao buscar acomodações por categoria',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      )
+      this.handleError(error, 'Erro ao buscar acomodações por tipo')
     }
   }
 
@@ -77,6 +56,8 @@ export class AccommodationsController {
     @Query('lng') lng: number,
     @Query('radius') radius: number = 10,
   ) {
+    this.validateCoordinates(lat, lng)
+
     try {
       return await this.accommodationsService.findNearbyAccommodations(
         lat,
@@ -84,11 +65,7 @@ export class AccommodationsController {
         radius,
       )
     } catch (error) {
-      console.error('Erro ao buscar acomodações próximas:', error.message)
-      throw new HttpException(
-        'Erro interno ao buscar acomodações próximas',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      )
+      this.handleError(error, 'Erro ao buscar acomodações próximas')
     }
   }
 
@@ -99,10 +76,23 @@ export class AccommodationsController {
     }
 
     try {
-      const response = await axios.get(
-        `https://api.opencagedata.com/geocode/v1/json?q=${zipCode}&key=${this.openCageApiKey}`,
+      const coordinates = await this.getCoordinatesByZipCode(zipCode)
+      return await this.accommodationsService.findNearbyAccommodations(
+        coordinates.lat,
+        coordinates.lng,
       )
+    } catch (error) {
+      this.handleError(error, 'Erro ao buscar acomodações por CEP')
+    }
+  }
 
+  private async getCoordinatesByZipCode(
+    zipCode: string,
+  ): Promise<{ lat: number; lng: number }> {
+    const url = `https://api.opencagedata.com/geocode/v1/json?q=${zipCode}&key=${this.openCageApiKey}`
+
+    try {
+      const response = await axios.get(url)
       const result = response.data.results[0]
 
       if (!result) {
@@ -113,13 +103,34 @@ export class AccommodationsController {
       }
 
       const { lat, lng } = result.geometry
-      return await this.accommodationsService.findNearbyAccommodations(lat, lng)
+      return { lat, lng }
     } catch (error) {
-      console.error('Erro ao buscar acomodações por CEP:', error.message)
-      throw new HttpException(
-        'Erro interno ao buscar acomodações por CEP',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      )
+      this.handleError(error, 'Erro ao consultar a API do OpenCage')
+    }
+  }
+
+  private handleError(error: any, customMessage: string): void {
+    console.error(error.message)
+    throw new HttpException(customMessage, HttpStatus.INTERNAL_SERVER_ERROR)
+  }
+
+  private parseId(id: string): number {
+    const parsedId = Number(id)
+    if (isNaN(parsedId)) {
+      throw new HttpException('ID inválido', HttpStatus.BAD_REQUEST)
+    }
+    return parsedId
+  }
+
+  private checkAccommodationExistence(accommodation: any): void {
+    if (!accommodation) {
+      throw new HttpException('Acomodação não encontrada', HttpStatus.NOT_FOUND)
+    }
+  }
+
+  private validateCoordinates(lat: number, lng: number): void {
+    if (isNaN(lat) || isNaN(lng)) {
+      throw new HttpException('Coordenadas inválidas', HttpStatus.BAD_REQUEST)
     }
   }
 }

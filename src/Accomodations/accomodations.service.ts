@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
-import { accommodations } from '@prisma/client'
 import axios from 'axios'
 
 @Injectable()
@@ -62,8 +61,8 @@ export class AccommodationsService {
     }
   }
 
-  async searchByCategory(category: string): Promise<any[]> {
-    const validCategories = [
+  async searchByType(type: string): Promise<any[]> {
+    const validTypes = [
       'HOTEL',
       'HOSTEL',
       'APARTMENT',
@@ -76,22 +75,39 @@ export class AccommodationsService {
       'CABIN',
     ]
 
-    if (!validCategories.includes(category)) {
-      throw new Error('Categoria inválida')
+    const upperCaseType = type.toUpperCase()
+
+    if (!validTypes.includes(upperCaseType)) {
+      throw new Error('Tipo inválido')
     }
 
-    return this.prisma.accommodations.findMany({
-      where: { type: category as any },
-      select: {
-        id: true,
-        city: true,
-        state: true,
-        description: true,
-        reviews: true,
-        thumb: true,
-        amenities: true,
-      },
-    })
+    try {
+      const accommodations = await this.prisma.accommodations.findMany({
+        where: { type: upperCaseType as any },
+        select: {
+          id: true,
+          city: true,
+          state: true,
+          description: true,
+          reviews: true,
+          thumb: true,
+          amenities: true,
+        },
+      })
+
+      return accommodations.map((accommodation) => ({
+        id: accommodation.id,
+        city: accommodation.city,
+        state: accommodation.state,
+        description: accommodation.description,
+        rating: this.calculateAverageRating(accommodation.reviews),
+        image: accommodation.thumb,
+        benefits: this.parseJson(accommodation.amenities),
+      }))
+    } catch (error) {
+      console.error('Erro ao buscar acomodações por tipo:', error.message)
+      throw new Error('Erro interno ao buscar acomodações por tipo')
+    }
   }
 
   async findNearbyAccommodations(
