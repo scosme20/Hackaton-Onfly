@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Param,
   Query,
   HttpException,
   HttpStatus,
@@ -27,6 +28,26 @@ export class AccommodationsController {
     }
   }
 
+  @Get(':id')
+  async findById(@Param('id') id: number) {
+    try {
+      const accommodation = await this.accommodationsService.findById(id)
+      if (!accommodation) {
+        throw new HttpException(
+          'Acomodação não encontrada',
+          HttpStatus.NOT_FOUND,
+        )
+      }
+      return accommodation
+    } catch (error) {
+      console.error('Erro ao buscar acomodação:', error.message)
+      throw new HttpException(
+        'Erro interno ao buscar acomodação',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      )
+    }
+  }
+
   @Get('search')
   async searchByCategory(@Query('category') category: string) {
     if (!category) {
@@ -39,6 +60,27 @@ export class AccommodationsController {
       console.error('Erro ao buscar acomodações por categoria:', error.message)
       throw new HttpException(
         'Erro ao buscar acomodações por categoria',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      )
+    }
+  }
+
+  @Get('nearby')
+  async findNearbyAccommodations(
+    @Query('lat') lat: number,
+    @Query('lng') lng: number,
+    @Query('radius') radius: number = 10,
+  ) {
+    try {
+      return await this.accommodationsService.findNearbyAccommodations(
+        lat,
+        lng,
+        radius,
+      )
+    } catch (error) {
+      console.error('Erro ao buscar acomodações próximas:', error.message)
+      throw new HttpException(
+        'Erro interno ao buscar acomodações próximas',
         HttpStatus.INTERNAL_SERVER_ERROR,
       )
     }
