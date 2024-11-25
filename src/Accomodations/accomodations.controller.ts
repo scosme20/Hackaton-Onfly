@@ -1,15 +1,11 @@
 import {
   Controller,
   Get,
-  Post,
-  Body,
   Query,
-  Param,
-  Put,
-  Delete,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common'
-import { AccommodationsService } from '../Accomodations/accomodations.service'
-import { Prisma } from '@prisma/client'
+import { AccommodationsService } from './accomodations.service'
 import axios from 'axios'
 
 @Controller('accommodations')
@@ -24,32 +20,36 @@ export class AccommodationsController {
       return await this.accommodationsService.findAll()
     } catch (error) {
       console.error('Erro ao buscar acomodações:', error.message)
-      throw error
-    }
-  }
-
-  @Post()
-  async create(@Body() accommodationData: Prisma.accommodationsCreateInput) {
-    try {
-      return await this.accommodationsService.create(accommodationData)
-    } catch (error) {
-      console.error('Erro ao criar acomodação:', error.message)
-      throw error
+      throw new HttpException(
+        'Erro interno ao buscar acomodações',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      )
     }
   }
 
   @Get('search')
   async searchByCategory(@Query('category') category: string) {
+    if (!category) {
+      throw new HttpException('Categoria não fornecida', HttpStatus.BAD_REQUEST)
+    }
+
     try {
       return await this.accommodationsService.searchByCategory(category)
     } catch (error) {
       console.error('Erro ao buscar acomodações por categoria:', error.message)
-      throw error
+      throw new HttpException(
+        'Erro ao buscar acomodações por categoria',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      )
     }
   }
 
   @Get('search-by-zip')
   async searchByZipCode(@Query('zipCode') zipCode: string) {
+    if (!zipCode) {
+      throw new HttpException('CEP não fornecido', HttpStatus.BAD_REQUEST)
+    }
+
     try {
       const response = await axios.get(
         `https://api.opencagedata.com/geocode/v1/json?q=${zipCode}&key=${this.openCageApiKey}`,
@@ -58,40 +58,20 @@ export class AccommodationsController {
       const result = response.data.results[0]
 
       if (!result) {
-        throw new Error(
+        throw new HttpException(
           'Não foi possível encontrar dados de localização para este CEP',
+          HttpStatus.NOT_FOUND,
         )
       }
 
       const { lat, lng } = result.geometry
-
       return await this.accommodationsService.findNearbyAccommodations(lat, lng)
     } catch (error) {
       console.error('Erro ao buscar acomodações por CEP:', error.message)
-      throw error
-    }
-  }
-
-  @Put(':id')
-  async update(
-    @Param('id') id: number,
-    @Body() accommodationData: Prisma.accommodationsUpdateInput,
-  ) {
-    try {
-      return await this.accommodationsService.update(id, accommodationData)
-    } catch (error) {
-      console.error('Erro ao atualizar acomodação:', error.message)
-      throw error
-    }
-  }
-
-  @Delete(':id')
-  async remove(@Param('id') id: number) {
-    try {
-      return await this.accommodationsService.remove(id)
-    } catch (error) {
-      console.error('Erro ao excluir acomodação:', error.message)
-      throw error
+      throw new HttpException(
+        'Erro interno ao buscar acomodações por CEP',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      )
     }
   }
 }

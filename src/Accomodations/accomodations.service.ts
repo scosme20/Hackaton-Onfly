@@ -9,43 +9,6 @@ export class AccommodationsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: any): Promise<accommodations> {
-    // Removendo o campo 'updatedAt' e passando apenas os dados válidos
-    const { updatedAt, ...validData } = data
-
-    return this.prisma.accommodations.create({
-      data: validData, // Passando apenas os dados válidos, sem 'updatedAt'
-    })
-  }
-
-  // Atualizar uma acomodação
-  async update(id: number, data: any): Promise<accommodations> {
-    try {
-      const accommodation = await this.prisma.accommodations.update({
-        where: { id },
-        data: { ...data }, // Passando os dados a serem atualizados
-      })
-      return accommodation
-    } catch (error) {
-      console.error('Erro ao atualizar acomodação:', error.message)
-      throw error
-    }
-  }
-
-  // Excluir uma acomodação
-  async remove(id: number): Promise<accommodations> {
-    try {
-      const accommodation = await this.prisma.accommodations.delete({
-        where: { id },
-      })
-      return accommodation
-    } catch (error) {
-      console.error('Erro ao excluir acomodação:', error.message)
-      throw error
-    }
-  }
-
-  // Buscar todas as acomodações
   async findAll(): Promise<any[]> {
     const accommodations = await this.prisma.accommodations.findMany({
       select: {
@@ -70,7 +33,6 @@ export class AccommodationsService {
     }))
   }
 
-  // Buscar acomodação por ID
   async findById(id: number): Promise<any | null> {
     const accommodation = await this.prisma.accommodations.findUnique({
       where: { id },
@@ -100,7 +62,6 @@ export class AccommodationsService {
     }
   }
 
-  // Buscar acomodações por categoria
   async searchByCategory(category: string): Promise<any[]> {
     const validCategories = [
       'HOTEL',
@@ -120,9 +81,7 @@ export class AccommodationsService {
     }
 
     return this.prisma.accommodations.findMany({
-      where: {
-        type: category as any, // Filtrando pelo tipo de acomodação
-      },
+      where: { type: category as any },
       select: {
         id: true,
         city: true,
@@ -135,7 +94,6 @@ export class AccommodationsService {
     })
   }
 
-  // Buscar acomodações próximas por coordenadas
   async findNearbyAccommodations(
     lat: number,
     lng: number,
@@ -173,7 +131,6 @@ export class AccommodationsService {
     })
   }
 
-  // Buscar coordenadas de um CEP
   async getCoordinatesByZipCode(
     zipCode: string,
   ): Promise<{ lat: number; lng: number }> {
@@ -195,14 +152,13 @@ export class AccommodationsService {
     }
   }
 
-  // Calcular a distância entre duas coordenadas
   private calculateDistance(
     lat1: number,
     lon1: number,
     lat2: number,
     lon2: number,
   ): number {
-    const R = 6371 // Raio da Terra em km
+    const R = 6371
     const dLat = this.degToRad(lat2 - lat1)
     const dLon = this.degToRad(lon2 - lon1)
     const a =
@@ -212,15 +168,13 @@ export class AccommodationsService {
         Math.sin(dLon / 2) *
         Math.sin(dLon / 2)
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    return R * c // Distância em km
+    return R * c
   }
 
-  // Converter graus para radianos
   private degToRad(deg: number): number {
     return deg * (Math.PI / 180)
   }
 
-  // Calcular a média das avaliações
   private calculateAverageRating(reviewsJson: unknown): number {
     const reviews = this.parseJson(reviewsJson)
 
@@ -232,7 +186,6 @@ export class AccommodationsService {
     return total / reviews.length
   }
 
-  // Converter string JSON para objeto
   private parseJson(json: unknown): any {
     try {
       return typeof json === 'string' ? JSON.parse(json) : json
