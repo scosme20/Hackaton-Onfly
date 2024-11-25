@@ -29,15 +29,21 @@ export class AccommodationsController {
   }
 
   @Get(':id')
-  async findById(@Param('id') id: number) {
+  async findById(@Param('id') id: string) {
     try {
-      const accommodation = await this.accommodationsService.findById(id)
+      const parsedId = Number(id) // Convertendo para número
+      if (isNaN(parsedId)) {
+        throw new HttpException('ID inválido', HttpStatus.BAD_REQUEST)
+      }
+
+      const accommodation = await this.accommodationsService.findById(parsedId)
       if (!accommodation) {
         throw new HttpException(
           'Acomodação não encontrada',
           HttpStatus.NOT_FOUND,
         )
       }
+
       return accommodation
     } catch (error) {
       console.error('Erro ao buscar acomodação:', error.message)
