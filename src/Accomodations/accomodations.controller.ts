@@ -1,12 +1,15 @@
 import {
   Controller,
   Get,
-  Param,
+  Post,
+  Body,
   Query,
-  HttpException,
-  HttpStatus,
+  Param,
+  Put,
+  Delete,
 } from '@nestjs/common'
-import { AccommodationsService } from './accomodations.service'
+import { AccommodationsService } from '../Accomodations/accomodations.service'
+import { Prisma } from '@prisma/client'
 import axios from 'axios'
 
 @Controller('accommodations')
@@ -20,117 +23,75 @@ export class AccommodationsController {
     try {
       return await this.accommodationsService.findAll()
     } catch (error) {
-      this.handleError(error, 'Erro ao buscar acomodações')
+      console.error('Erro ao buscar acomodações:', error.message)
+      throw error
     }
   }
 
-  @Get('id/:id')
-  async findById(@Param('id') id: string) {
+  @Post()
+  async create(@Body() accommodationData: Prisma.accommodationsCreateInput) {
     try {
-      const parsedId = this.parseId(id)
-      const accommodation = await this.accommodationsService.findById(parsedId)
-      this.checkAccommodationExistence(accommodation)
-
-      return accommodation
+      return await this.accommodationsService.create(accommodationData)
     } catch (error) {
-      this.handleError(error, 'Erro ao buscar acomodação')
+      console.error('Erro ao criar acomodação:', error.message)
+      throw error
     }
   }
 
-  @Get('type/:type')
-  async searchByType(@Param('type') type: string) {
-    if (!type) {
-      throw new HttpException('Tipo não fornecido', HttpStatus.BAD_REQUEST)
-    }
-
+  @Get('search')
+  async searchByCategory(@Query('category') category: string) {
     try {
-      return await this.accommodationsService.searchByType(type)
+      return await this.accommodationsService.searchByCategory(category)
     } catch (error) {
-      this.handleError(error, 'Erro ao buscar acomodações por tipo')
-    }
-  }
-
-  @Get('nearby')
-  async findNearbyAccommodations(
-    @Query('lat') lat: number,
-    @Query('lng') lng: number,
-    @Query('radius') radius: number = 10,
-  ) {
-    this.validateCoordinates(lat, lng)
-
-    try {
-      return await this.accommodationsService.findNearbyAccommodations(
-        lat,
-        lng,
-        radius,
-      )
-    } catch (error) {
-      this.handleError(error, 'Erro ao buscar acomodações próximas')
+      console.error('Erro ao buscar acomodações por categoria:', error.message)
+      throw error
     }
   }
 
   @Get('search-by-zip')
   async searchByZipCode(@Query('zipCode') zipCode: string) {
-    if (!zipCode) {
-      throw new HttpException('CEP não fornecido', HttpStatus.BAD_REQUEST)
-    }
-
     try {
-      const coordinates = await this.getCoordinatesByZipCode(zipCode)
-      return await this.accommodationsService.findNearbyAccommodations(
-        coordinates.lat,
-        coordinates.lng,
+      const response = await axios.get(
+        `https://api.opencagedata.com/geocode/v1/json?q=${zipCode}&key=${this.openCageApiKey}`,
       )
-    } catch (error) {
-      this.handleError(error, 'Erro ao buscar acomodações por CEP')
-    }
-  }
 
-  private async getCoordinatesByZipCode(
-    zipCode: string,
-  ): Promise<{ lat: number; lng: number }> {
-    const url = `https://api.opencagedata.com/geocode/v1/json?q=${zipCode}&key=${this.openCageApiKey}`
-
-    try {
-      const response = await axios.get(url)
       const result = response.data.results[0]
 
       if (!result) {
-        throw new HttpException(
+        throw new Error(
           'Não foi possível encontrar dados de localização para este CEP',
-          HttpStatus.NOT_FOUND,
         )
       }
 
       const { lat, lng } = result.geometry
-      return { lat, lng }
+
+      return await this.accommodationsService.findNearbyAccommodations(lat, lng)
     } catch (error) {
-      this.handleError(error, 'Erro ao consultar a API do OpenCage')
+      console.error('Erro ao buscar acomodações por CEP:', error.message)
+      throw error
     }
   }
 
-  private handleError(error: any, customMessage: string): void {
-    console.error(error.message)
-    throw new HttpException(customMessage, HttpStatus.INTERNAL_SERVER_ERROR)
-  }
-
-  private parseId(id: string): number {
-    const parsedId = Number(id)
-    if (isNaN(parsedId)) {
-      throw new HttpException('ID inválido', HttpStatus.BAD_REQUEST)
-    }
-    return parsedId
-  }
-
-  private checkAccommodationExistence(accommodation: any): void {
-    if (!accommodation) {
-      throw new HttpException('Acomodação não encontrada', HttpStatus.NOT_FOUND)
+  @Put(':id')
+  async update(
+    @Param('id') id: number,
+    @Body() accommodationData: Prisma.accommodationsUpdateInput,
+  ) {
+    try {
+      return await this.accommodationsService.update(id, accommodationData)
+    } catch (error) {
+      console.error('Erro ao atualizar acomodação:', error.message)
+      throw error
     }
   }
 
-  private validateCoordinates(lat: number, lng: number): void {
-    if (isNaN(lat) || isNaN(lng)) {
-      throw new HttpException('Coordenadas inválidas', HttpStatus.BAD_REQUEST)
+  @Delete(':id')
+  async remove(@Param('id') id: number) {
+    try {
+      return await this.accommodationsService.remove(id)
+    } catch (error) {
+      console.error('Erro ao excluir acomodação:', error.message)
+      throw error
     }
   }
 }

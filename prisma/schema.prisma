@@ -28,8 +28,8 @@ model accommodations {
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   cnpj        String?             @db.VarChar(20)
-  type        accommodations_type? // Tornando o tipo opcional
-  type_number Int?                 @default(1) // Tornando o tipo número opcional
+  type        accommodations_type? 
+  type_number Int?                 @default(1) 
 }
 enum accommodations_type {
   HOTEL

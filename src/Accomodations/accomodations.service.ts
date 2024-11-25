@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+import { accommodations } from '@prisma/client'
 import axios from 'axios'
 
 @Injectable()
@@ -8,21 +9,58 @@ export class AccommodationsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  async create(data: any): Promise<accommodations> {
+    const { updatedAt, ...validData } = data
+
+    return this.prisma.accommodations.create({
+      data: validData,
+    })
+  }
+
+  async update(id: number, data: any): Promise<accommodations> {
+    try {
+      const accommodation = await this.prisma.accommodations.update({
+        where: { id },
+        data: { ...data },
+      })
+      return accommodation
+    } catch (error) {
+      console.error('Erro ao atualizar acomodação:', error.message)
+      throw error
+    }
+  }
+
+  async remove(id: number): Promise<accommodations> {
+    try {
+      const accommodation = await this.prisma.accommodations.delete({
+        where: { id },
+      })
+      return accommodation
+    } catch (error) {
+      console.error('Erro ao excluir acomodação:', error.message)
+      throw error
+    }
+  }
+
   async findAll(): Promise<any[]> {
     const accommodations = await this.prisma.accommodations.findMany({
       select: {
         id: true,
+        name: true,
         city: true,
         state: true,
         description: true,
         reviews: true,
         thumb: true,
         amenities: true,
+        type: true,
       },
     })
 
     return accommodations.map((accommodation) => ({
       id: accommodation.id,
+      name: accommodation.name,
+      type: accommodation.type,
       city: accommodation.city,
       state: accommodation.state,
       description: accommodation.description,
@@ -37,12 +75,14 @@ export class AccommodationsService {
       where: { id },
       select: {
         id: true,
+        name: true,
         city: true,
         state: true,
         description: true,
         reviews: true,
         thumb: true,
         amenities: true,
+        type: true,
       },
     })
 
@@ -52,8 +92,10 @@ export class AccommodationsService {
 
     return {
       id: accommodation.id,
+      name: accommodation.name,
       city: accommodation.city,
       state: accommodation.state,
+      type: accommodation.type,
       description: accommodation.description,
       rating: this.calculateAverageRating(accommodation.reviews),
       image: accommodation.thumb,
@@ -61,8 +103,8 @@ export class AccommodationsService {
     }
   }
 
-  async searchByType(type: string): Promise<any[]> {
-    const validTypes = [
+  async searchByCategory(category: string): Promise<any[]> {
+    const validCategories = [
       'HOTEL',
       'HOSTEL',
       'APARTMENT',
@@ -75,39 +117,26 @@ export class AccommodationsService {
       'CABIN',
     ]
 
-    const upperCaseType = type.toUpperCase()
-
-    if (!validTypes.includes(upperCaseType)) {
-      throw new Error('Tipo inválido')
+    if (!validCategories.includes(category)) {
+      throw new Error('Categoria inválida')
     }
 
-    try {
-      const accommodations = await this.prisma.accommodations.findMany({
-        where: { type: upperCaseType as any },
-        select: {
-          id: true,
-          city: true,
-          state: true,
-          description: true,
-          reviews: true,
-          thumb: true,
-          amenities: true,
-        },
-      })
-
-      return accommodations.map((accommodation) => ({
-        id: accommodation.id,
-        city: accommodation.city,
-        state: accommodation.state,
-        description: accommodation.description,
-        rating: this.calculateAverageRating(accommodation.reviews),
-        image: accommodation.thumb,
-        benefits: this.parseJson(accommodation.amenities),
-      }))
-    } catch (error) {
-      console.error('Erro ao buscar acomodações por tipo:', error.message)
-      throw new Error('Erro interno ao buscar acomodações por tipo')
-    }
+    return this.prisma.accommodations.findMany({
+      where: {
+        type: category as any,
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        city: true,
+        state: true,
+        description: true,
+        reviews: true,
+        thumb: true,
+        amenities: true,
+      },
+    })
   }
 
   async findNearbyAccommodations(
@@ -184,7 +213,7 @@ export class AccommodationsService {
         Math.sin(dLon / 2) *
         Math.sin(dLon / 2)
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    return R * c
+    return R * c // Distância em km
   }
 
   private degToRad(deg: number): number {
