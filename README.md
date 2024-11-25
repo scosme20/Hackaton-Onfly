@@ -4,6 +4,13 @@ Este projeto foi desenvolvido como uma solução para um desafio da Onfly, com o
 
 ---
 
+Acesso ao Deploy
+A API está disponível no seguinte link:
+
+Hackaton API - Onfly
+
+---
+
 ## Desafio: Filtro por Categorias de Acomodações
 
 A Onfly enfrentava dificuldades para implementar um filtro eficiente para categorias de acomodações, dificultando a busca por opções específicas como hotéis, hostels, apartamentos, entre outros. A solução desenvolvida implementa:
