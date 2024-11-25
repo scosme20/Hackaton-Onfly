@@ -5,17 +5,28 @@ import {
   Body,
   Query,
   Param,
-  Put,
   Delete,
+  BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common'
-import { AccommodationsService } from '../Accomodations/accomodations.service'
-import { Prisma } from '@prisma/client'
-import axios from 'axios'
+import { AccommodationsService } from './accomodations.service'
+import { Prisma, accommodations_type } from '@prisma/client'
+
+const VALID_CATEGORIES: accommodations_type[] = [
+  'HOTEL',
+  'HOSTEL',
+  'APARTMENT',
+  'RESORT',
+  'INN',
+  'MOTEL',
+  'GUESTHOUSE',
+  'VILLA',
+  'COTTAGE',
+  'CABIN',
+]
 
 @Controller('accommodations')
 export class AccommodationsController {
-  private readonly openCageApiKey = '649ce940f26944148f28236a9fa44f32'
-
   constructor(private readonly accommodationsService: AccommodationsService) {}
 
   @Get()
@@ -23,8 +34,8 @@ export class AccommodationsController {
     try {
       return await this.accommodationsService.findAll()
     } catch (error) {
-      console.error('Erro ao buscar acomodações:', error.message)
-      throw error
+      console.error('Erro ao listar acomodações:', error.message)
+      throw new InternalServerErrorException('Erro ao listar acomodações')
     }
   }
 
@@ -34,64 +45,61 @@ export class AccommodationsController {
       return await this.accommodationsService.create(accommodationData)
     } catch (error) {
       console.error('Erro ao criar acomodação:', error.message)
-      throw error
+      throw new InternalServerErrorException('Erro ao criar acomodação')
     }
   }
 
   @Get('search')
   async searchByCategory(@Query('category') category: string) {
+    if (!VALID_CATEGORIES.includes(category as accommodations_type)) {
+      throw new BadRequestException('Categoria inválida')
+    }
+
     try {
-      return await this.accommodationsService.searchByCategory(category)
+      return await this.accommodationsService.searchByCategory(
+        category as accommodations_type,
+      )
     } catch (error) {
-      console.error('Erro ao buscar acomodações por categoria:', error.message)
-      throw error
+      console.error('Erro ao buscar por categoria:', error.message)
+      throw new InternalServerErrorException('Erro ao buscar por categoria')
     }
   }
 
   @Get('search-by-zip')
   async searchByZipCode(@Query('zipCode') zipCode: string) {
+    if (!zipCode || zipCode.trim().length === 0) {
+      throw new BadRequestException('CEP inválido')
+    }
+
     try {
-      const response = await axios.get(
-        `https://api.opencagedata.com/geocode/v1/json?q=${zipCode}&key=${this.openCageApiKey}`,
+      const location =
+        await this.accommodationsService.getCoordinatesByZipCode(zipCode)
+
+      return await this.accommodationsService.findNearbyAccommodations(
+        location.lat,
+        location.lng,
       )
-
-      const result = response.data.results[0]
-
-      if (!result) {
-        throw new Error(
-          'Não foi possível encontrar dados de localização para este CEP',
-        )
-      }
-
-      const { lat, lng } = result.geometry
-
-      return await this.accommodationsService.findNearbyAccommodations(lat, lng)
     } catch (error) {
-      console.error('Erro ao buscar acomodações por CEP:', error.message)
-      throw error
+      console.error('Erro ao buscar por CEP:', error.message)
+      throw new InternalServerErrorException(
+        'Erro ao buscar acomodações pelo CEP',
+      )
     }
   }
 
-  @Put(':id')
-  async update(
-    @Param('id') id: number,
-    @Body() accommodationData: Prisma.accommodationsUpdateInput,
-  ) {
-    try {
-      return await this.accommodationsService.update(id, accommodationData)
-    } catch (error) {
-      console.error('Erro ao atualizar acomodação:', error.message)
-      throw error
-    }
-  }
+  @Get(':id')
+  async findById(@Param('id') id: string) {
+    const parsedId = parseInt(id, 10)
 
-  @Delete(':id')
-  async remove(@Param('id') id: number) {
+    if (isNaN(parsedId)) {
+      throw new BadRequestException('ID inválido')
+    }
+
     try {
-      return await this.accommodationsService.remove(id)
+      return await this.accommodationsService.findById(parsedId)
     } catch (error) {
-      console.error('Erro ao excluir acomodação:', error.message)
-      throw error
+      console.error('Erro ao buscar acomodação por ID:', error.message)
+      throw new InternalServerErrorException('Erro ao buscar acomodação por ID')
     }
   }
 }

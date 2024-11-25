@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
-import { accommodations } from '@prisma/client'
+import { accommodations, accommodations_type } from '@prisma/client'
 import axios from 'axios'
 
 @Injectable()
@@ -17,25 +17,9 @@ export class AccommodationsService {
     })
   }
 
-  async update(id: number, data: any): Promise<accommodations> {
-    try {
-      const accommodation = await this.prisma.accommodations.update({
-        where: { id },
-        data: { ...data },
-      })
-      return accommodation
-    } catch (error) {
-      console.error('Erro ao atualizar acomodação:', error.message)
-      throw error
-    }
-  }
-
   async remove(id: number): Promise<accommodations> {
     try {
-      const accommodation = await this.prisma.accommodations.delete({
-        where: { id },
-      })
-      return accommodation
+      return await this.prisma.accommodations.delete({ where: { id } })
     } catch (error) {
       console.error('Erro ao excluir acomodação:', error.message)
       throw error
@@ -87,7 +71,7 @@ export class AccommodationsService {
     })
 
     if (!accommodation) {
-      return null
+      throw new Error('Acomodação não encontrada')
     }
 
     return {
@@ -104,7 +88,7 @@ export class AccommodationsService {
   }
 
   async searchByCategory(category: string): Promise<any[]> {
-    const validCategories = [
+    const validCategories: accommodations_type[] = [
       'HOTEL',
       'HOSTEL',
       'APARTMENT',
@@ -117,14 +101,12 @@ export class AccommodationsService {
       'CABIN',
     ]
 
-    if (!validCategories.includes(category)) {
+    if (!validCategories.includes(category as accommodations_type)) {
       throw new Error('Categoria inválida')
     }
 
-    return this.prisma.accommodations.findMany({
-      where: {
-        type: category as any,
-      },
+    const accommodations = await this.prisma.accommodations.findMany({
+      where: { type: category as accommodations_type },
       select: {
         id: true,
         name: true,
@@ -137,6 +119,18 @@ export class AccommodationsService {
         amenities: true,
       },
     })
+
+    return accommodations.map((accommodation) => ({
+      id: accommodation.id,
+      name: accommodation.name,
+      type: accommodation.type,
+      city: accommodation.city,
+      state: accommodation.state,
+      description: accommodation.description,
+      rating: this.calculateAverageRating(accommodation.reviews),
+      image: accommodation.thumb,
+      benefits: this.parseJson(accommodation.amenities),
+    }))
   }
 
   async findNearbyAccommodations(
@@ -179,22 +173,18 @@ export class AccommodationsService {
   async getCoordinatesByZipCode(
     zipCode: string,
   ): Promise<{ lat: number; lng: number }> {
-    const url = `https://api.opencagedata.com/geocode/v1/json?q=${zipCode}&key=${this.openCageApiKey}`
+    const response = await axios.get(
+      `https://api.opencagedata.com/geocode/v1/json?q=${zipCode}&key=${this.openCageApiKey}`,
+    )
 
-    try {
-      const response = await axios.get(url)
-      const result = response.data.results[0]
-
-      if (!result) {
-        throw new Error('Localização não encontrada para este CEP')
-      }
-
-      const { lat, lng } = result.geometry
-      return { lat, lng }
-    } catch (error) {
-      console.error('Erro ao buscar coordenadas:', error.message)
-      throw new Error('Erro ao consultar a API do OpenCage')
+    const result = response.data.results[0]
+    if (!result) {
+      throw new Error(
+        'Não foi possível encontrar dados de localização para este CEP',
+      )
     }
+
+    return result.geometry
   }
 
   private calculateDistance(
@@ -203,7 +193,7 @@ export class AccommodationsService {
     lat2: number,
     lon2: number,
   ): number {
-    const R = 6371
+    const R = 6371 // Raio da Terra em km
     const dLat = this.degToRad(lat2 - lat1)
     const dLon = this.degToRad(lon2 - lon1)
     const a =
@@ -213,7 +203,7 @@ export class AccommodationsService {
         Math.sin(dLon / 2) *
         Math.sin(dLon / 2)
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    return R * c // Distância em km
+    return R * c
   }
 
   private degToRad(deg: number): number {
