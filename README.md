@@ -4,10 +4,11 @@ Este projeto foi desenvolvido como uma solução para um desafio da Onfly, com o
 
 ---
 
-Acesso ao Deploy
+## Acesso ao Deploy
+
 A API está disponível no seguinte link:
 
-Hackaton API - Onfly
+[Hackaton API - Onfly](https://hackaton-onfly.onrender.com)
 
 ---
 
@@ -130,7 +131,7 @@ Isso abrirá o Prisma Studio no navegador, permitindo visualizar e manipular os 
 
 ## Executando a API
 
-A aplicação estará disponível em:
+Se estiver rodando localmente, a aplicação estará disponível em:
 
 ```text
 http://localhost:3333
