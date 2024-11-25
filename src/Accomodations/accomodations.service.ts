@@ -9,23 +9,6 @@ export class AccommodationsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: any): Promise<accommodations> {
-    const { updatedAt, ...validData } = data
-
-    return this.prisma.accommodations.create({
-      data: validData,
-    })
-  }
-
-  async remove(id: number): Promise<accommodations> {
-    try {
-      return await this.prisma.accommodations.delete({ where: { id } })
-    } catch (error) {
-      console.error('Erro ao excluir acomodação:', error.message)
-      throw error
-    }
-  }
-
   async findAll(): Promise<any[]> {
     const accommodations = await this.prisma.accommodations.findMany({
       select: {
@@ -34,7 +17,7 @@ export class AccommodationsService {
         city: true,
         state: true,
         description: true,
-        reviews: true,
+        stars: true,
         thumb: true,
         amenities: true,
         type: true,
@@ -48,7 +31,7 @@ export class AccommodationsService {
       city: accommodation.city,
       state: accommodation.state,
       description: accommodation.description,
-      rating: this.calculateAverageRating(accommodation.reviews),
+      stars: accommodation.stars,
       image: accommodation.thumb,
       benefits: this.parseJson(accommodation.amenities),
     }))
@@ -105,8 +88,10 @@ export class AccommodationsService {
       throw new Error('Categoria inválida')
     }
 
-    const accommodations = await this.prisma.accommodations.findMany({
-      where: { type: category as accommodations_type },
+    return this.prisma.accommodations.findMany({
+      where: {
+        type: category as any,
+      },
       select: {
         id: true,
         name: true,
@@ -114,23 +99,11 @@ export class AccommodationsService {
         city: true,
         state: true,
         description: true,
-        reviews: true,
+        stars: true,
         thumb: true,
         amenities: true,
       },
     })
-
-    return accommodations.map((accommodation) => ({
-      id: accommodation.id,
-      name: accommodation.name,
-      type: accommodation.type,
-      city: accommodation.city,
-      state: accommodation.state,
-      description: accommodation.description,
-      rating: this.calculateAverageRating(accommodation.reviews),
-      image: accommodation.thumb,
-      benefits: this.parseJson(accommodation.amenities),
-    }))
   }
 
   async findNearbyAccommodations(
@@ -193,7 +166,7 @@ export class AccommodationsService {
     lat2: number,
     lon2: number,
   ): number {
-    const R = 6371 // Raio da Terra em km
+    const R = 6371
     const dLat = this.degToRad(lat2 - lat1)
     const dLon = this.degToRad(lon2 - lon1)
     const a =

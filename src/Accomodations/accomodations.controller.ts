@@ -1,16 +1,13 @@
 import {
   Controller,
   Get,
-  Post,
-  Body,
   Query,
   Param,
-  Delete,
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common'
 import { AccommodationsService } from './accomodations.service'
-import { Prisma, accommodations_type } from '@prisma/client'
+import { accommodations_type } from '@prisma/client'
 
 const VALID_CATEGORIES: accommodations_type[] = [
   'HOTEL',
@@ -36,16 +33,6 @@ export class AccommodationsController {
     } catch (error) {
       console.error('Erro ao listar acomodações:', error.message)
       throw new InternalServerErrorException('Erro ao listar acomodações')
-    }
-  }
-
-  @Post()
-  async create(@Body() accommodationData: Prisma.accommodationsCreateInput) {
-    try {
-      return await this.accommodationsService.create(accommodationData)
-    } catch (error) {
-      console.error('Erro ao criar acomodação:', error.message)
-      throw new InternalServerErrorException('Erro ao criar acomodação')
     }
   }
 
