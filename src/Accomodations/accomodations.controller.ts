@@ -31,7 +31,7 @@ export class AccommodationsController {
   @ApiResponse({
     status: 200,
     description: 'Acomodações encontradas com sucesso',
-    type: Array, // Retorna uma lista de acomodações
+    type: Array,
   })
   @ApiResponse({ status: 500, description: 'Erro ao listar acomodações' })
   @Get()
@@ -50,7 +50,7 @@ export class AccommodationsController {
   @ApiResponse({
     status: 200,
     description: 'Acomodações encontradas',
-    type: Array, // Retorna uma lista de acomodações
+    type: Array, 
   })
   @ApiResponse({ status: 400, description: 'Categoria inválida' })
   @Get('search-by-category')
@@ -77,7 +77,7 @@ export class AccommodationsController {
   @ApiResponse({
     status: 200,
     description: 'Acomodações encontradas por CEP',
-    type: Array, // Retorna uma lista de acomodações
+    type: Array,
   })
   @ApiResponse({ status: 400, description: 'CEP inválido' })
   @ApiResponse({
@@ -86,7 +86,7 @@ export class AccommodationsController {
   })
   @Get('search-by-cep')
   async searchByCep(@Query('cep') cep: string) {
-    const cepPattern = /^\d{5}-?\d{3}$/; // Permitir CEP com ou sem hífen
+    const cepPattern = /^\d{5}-?\d{3}$/;
 
     if (!cepPattern.test(cep)) {
       throw new BadRequestException(
@@ -116,7 +116,7 @@ export class AccommodationsController {
   @ApiResponse({
     status: 200,
     description: 'Acomodação encontrada',
-    type: Object, // Retorna uma acomodação
+    type: Object,
   })
   @ApiResponse({ status: 400, description: 'ID inválido' })
   @ApiResponse({ status: 500, description: 'Erro ao buscar acomodação por ID' })
