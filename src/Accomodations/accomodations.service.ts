@@ -33,7 +33,7 @@ export class AccommodationsService {
       description: accommodation.description,
       stars: accommodation.stars,
       image: accommodation.thumb,
-      benefits: this.parseJson(accommodation.amenities),
+      amenities: this.parseJson(accommodation.amenities),
     }))
   }
 
