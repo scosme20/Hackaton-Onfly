@@ -1,22 +1,23 @@
-import { IsNotEmpty, IsString, IsOptional } from 'class-validator'
+import { IsString, IsEnum, IsNumber, IsOptional } from 'class-validator'
+import { accommodations_type } from '@prisma/client'
 
 export class CreateAccommodationDto {
-  @IsNotEmpty()
   @IsString()
   name: string
 
-  @IsNotEmpty()
-  @IsString()
-  address: string
-
-  @IsNotEmpty()
   @IsString()
   city: string
 
-  @IsOptional()
   @IsString()
-  description?: string
+  state: string
+
+  @IsString()
+  description: string
+
+  @IsEnum(accommodations_type)
+  type: accommodations_type
 
   @IsOptional()
-  price?: number
+  @IsNumber()
+  stars?: number
 }

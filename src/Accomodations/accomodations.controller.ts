@@ -8,24 +8,31 @@ import {
 } from '@nestjs/common'
 import { AccommodationsService } from './accomodations.service'
 import { accommodations_type } from '@prisma/client'
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 
 const VALID_CATEGORIES: accommodations_type[] = [
-  'HOTEL',
-  'HOSTEL',
-  'APARTMENT',
-  'RESORT',
-  'INN',
-  'MOTEL',
-  'GUESTHOUSE',
-  'VILLA',
-  'COTTAGE',
-  'CABIN',
+  accommodations_type.HOTEL,
+  accommodations_type.APARTMENT,
+  accommodations_type.RESORT,
+  accommodations_type.INN,
+  accommodations_type.MOTEL,
+  accommodations_type.GUESTHOUSE,
+  accommodations_type.VILLA,
+  accommodations_type.COTTAGE,
+  accommodations_type.CABIN,
 ]
 
+@ApiTags('Accommodations')
 @Controller('accommodations')
 export class AccommodationsController {
   constructor(private readonly accommodationsService: AccommodationsService) {}
 
+  @ApiOperation({ summary: 'Obter todas as acomodações' })
+  @ApiResponse({
+    status: 200,
+    description: 'Acomodações encontradas com sucesso',
+  })
+  @ApiResponse({ status: 500, description: 'Erro ao listar acomodações' })
   @Get()
   async findAll() {
     try {
@@ -36,6 +43,9 @@ export class AccommodationsController {
     }
   }
 
+  @ApiOperation({ summary: 'Buscar acomodações por categoria' })
+  @ApiResponse({ status: 200, description: 'Acomodações encontradas' })
+  @ApiResponse({ status: 400, description: 'Categoria inválida' })
   @Get('search')
   async searchByCategory(@Query('category') category: string) {
     if (!VALID_CATEGORIES.includes(category as accommodations_type)) {
@@ -52,28 +62,10 @@ export class AccommodationsController {
     }
   }
 
-  @Get('search-by-zip')
-  async searchByZipCode(@Query('zipCode') zipCode: string) {
-    if (!zipCode || zipCode.trim().length === 0) {
-      throw new BadRequestException('CEP inválido')
-    }
-
-    try {
-      const location =
-        await this.accommodationsService.getCoordinatesByZipCode(zipCode)
-
-      return await this.accommodationsService.findNearbyAccommodations(
-        location.lat,
-        location.lng,
-      )
-    } catch (error) {
-      console.error('Erro ao buscar por CEP:', error.message)
-      throw new InternalServerErrorException(
-        'Erro ao buscar acomodações pelo CEP',
-      )
-    }
-  }
-
+  @ApiOperation({ summary: 'Buscar acomodações por ID' })
+  @ApiResponse({ status: 200, description: 'Acomodação encontrada' })
+  @ApiResponse({ status: 400, description: 'ID inválido' })
+  @ApiResponse({ status: 500, description: 'Erro ao buscar acomodação por ID' })
   @Get(':id')
   async findById(@Param('id') id: string) {
     const parsedId = parseInt(id, 10)
