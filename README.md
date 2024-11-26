@@ -32,6 +32,8 @@ Essa abordagem garante que os usuários possam filtrar acomodações com rapidez
 - **Aiven**: Plataforma de dados em nuvem para hospedagem do banco de dados.
 - **Docker**: Facilita o deploy e a replicação do ambiente de desenvolvimento.
 - **Axios**: Realiza integrações com APIs externas, como a geolocalização baseada em CEP.
+- **ViaCEP**: API utilizada para obter dados de localização com base no CEP.
+- **OpenCage**: API utilizada para realizar geocodificação baseada em CEP, fornecendo informações detalhadas sobre a localização.
 
 ---
 
@@ -40,7 +42,9 @@ Essa abordagem garante que os usuários possam filtrar acomodações com rapidez
 - **NestJS**: Estruturou a lógica de negócio em módulos, serviços e controladores, seguindo princípios como injeção de dependência.
 - **Prisma ORM**: Realizou consultas otimizadas no banco de dados para buscar acomodações e categorias.
 - **MySQL**: Armazenou os dados relacionados às acomodações, como tipo, localização, avaliações e benefícios.
-- **Axios**: Integrado à API do OpenCage para geocodificação baseada em CEP.
+- **Axios**: Integrado às APIs externas, incluindo **ViaCEP** para dados de endereço e **OpenCage** para geocodificação.
+- **ViaCEP**: Utilizada para recuperar dados de endereço a partir do CEP fornecido de forma eficiente.
+- **OpenCage**: Utilizada para enriquecer a busca com dados de geolocalização e informações adicionais sobre o endereço.
 - **Docker**: Gerou containers para a aplicação e o banco de dados, criando um ambiente padronizado para desenvolvimento e produção.
 
 ---
