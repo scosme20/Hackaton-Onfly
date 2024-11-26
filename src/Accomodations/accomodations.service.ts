@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, InternalServerErrorException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { accommodations, accommodations_type } from '@prisma/client'
 import axios from 'axios'
@@ -54,7 +54,7 @@ export class AccommodationsService {
     })
 
     if (!accommodation) {
-      throw new Error('Acomodação não encontrada')
+      throw new InternalServerErrorException('Acomodação não encontrada')
     }
 
     return {
@@ -85,7 +85,7 @@ export class AccommodationsService {
     ]
 
     if (!validCategories.includes(category as accommodations_type)) {
-      throw new Error('Categoria inválida')
+      throw new InternalServerErrorException('Categoria inválida')
     }
 
     return this.prisma.accommodations.findMany({
@@ -146,18 +146,34 @@ export class AccommodationsService {
   async getCoordinatesByZipCode(
     zipCode: string,
   ): Promise<{ lat: number; lng: number }> {
-    const response = await axios.get(
-      `https://api.opencagedata.com/geocode/v1/json?q=${zipCode}&key=${this.openCageApiKey}`,
-    )
+    try {
+      const response = await axios.get(
+        `https://api.opencagedata.com/geocode/v1/json?q=${zipCode}&key=${this.openCageApiKey}`,
+      )
 
-    const result = response.data.results[0]
-    if (!result) {
-      throw new Error(
-        'Não foi possível encontrar dados de localização para este CEP',
+      const result = response.data.results[0]
+      if (result) {
+        return result.geometry
+      }
+
+      console.log('Tentando buscar com ViaCEP...')
+      const viaCepResponse = await axios.get(
+        `https://viacep.com.br/ws/${zipCode}/json/`,
+      )
+
+      const viaCepData = viaCepResponse.data
+      if (viaCepData.erro) {
+        throw new InternalServerErrorException(
+          'Não foi possível encontrar dados de localização para este CEP',
+        )
+      }
+
+      return { lat: 0, lng: 0 }
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Erro ao buscar coordenadas para o CEP ${zipCode}: ${error.message}`,
       )
     }
-
-    return result.geometry
   }
 
   private calculateDistance(
@@ -166,7 +182,7 @@ export class AccommodationsService {
     lat2: number,
     lon2: number,
   ): number {
-    const R = 6371
+    const R = 6371 
     const dLat = this.degToRad(lat2 - lat1)
     const dLon = this.degToRad(lon2 - lon1)
     const a =
@@ -176,7 +192,7 @@ export class AccommodationsService {
         Math.sin(dLon / 2) *
         Math.sin(dLon / 2)
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    return R * c
+    return R * c 
   }
 
   private degToRad(deg: number): number {
