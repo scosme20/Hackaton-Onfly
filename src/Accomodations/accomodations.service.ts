@@ -1,7 +1,11 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common'
+import {
+  Injectable,
+  InternalServerErrorException,
+  BadRequestException,
+} from '@nestjs/common'
+import axios from 'axios'
 import { PrismaService } from '../../prisma/prisma.service'
 import { accommodations_type } from '@prisma/client'
-import axios from 'axios'
 
 @Injectable()
 export class AccommodationsService {
@@ -9,100 +13,63 @@ export class AccommodationsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
-    const accommodations = await this.prisma.accommodations.findMany({
-      select: {
-        id: true,
-        name: true,
-        city: true,
-        state: true,
-        description: true,
-        stars: true,
-        thumb: true,
-        amenities: true,
-        type: true,
-      },
-    })
+  private sanitizeAndValidateCep(cep: string): string {
+    const sanitizedCep = cep.trim().replace('-', '')
+    const cepPattern = /^\d{8}$/
 
-    return accommodations.map((accommodation) => ({
-      id: accommodation.id,
-      name: accommodation.name,
-      type: accommodation.type,
-      city: accommodation.city,
-      state: accommodation.state,
-      description: accommodation.description,
-      stars: accommodation.stars,
-      image: accommodation.thumb,
-      amenities: this.parseJson(accommodation.amenities),
-    }))
-  }
-
-  async findById(id: number) {
-    const accommodation = await this.prisma.accommodations.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-        city: true,
-        state: true,
-        description: true,
-        reviews: true,
-        thumb: true,
-        amenities: true,
-        type: true,
-      },
-    })
-
-    if (!accommodation) {
-      throw new InternalServerErrorException('Acomodação não encontrada')
+    if (!cepPattern.test(sanitizedCep)) {
+      throw new BadRequestException(
+        'CEP inválido. O formato esperado é apenas números com 8 dígitos.',
+      )
     }
 
-    return {
-      id: accommodation.id,
-      name: accommodation.name,
-      city: accommodation.city,
-      state: accommodation.state,
-      type: accommodation.type,
-      description: accommodation.description,
-      image: accommodation.thumb,
-      amenities: this.parseJson(accommodation.amenities),
+    return sanitizedCep
+  }
+
+  async getCoordinatesByZipCode(
+    zipCode: string,
+  ): Promise<{ lat: number; lng: number }> {
+    try {
+      const response = await axios.get(
+        `https://api.opencagedata.com/geocode/v1/json?q=${zipCode}&key=${this.openCageApiKey}`,
+      )
+
+      const result = response.data.results[0]
+      if (result) {
+        return result.geometry
+      }
+
+      console.log('Tentando buscar com ViaCEP...')
+      const viaCepResponse = await axios.get(
+        `https://viacep.com.br/ws/${zipCode}/json/`,
+      )
+
+      const viaCepData = viaCepResponse.data
+      if (viaCepData.erro) {
+        throw new InternalServerErrorException(
+          'Não foi possível encontrar dados de localização para este CEP.',
+        )
+      }
+
+      return { lat: 0, lng: 0 }
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Erro ao buscar coordenadas para o CEP ${zipCode}: ${error.message}`,
+      )
     }
   }
 
-  async searchByCategory(category: string): Promise<any[]> {
-    const validCategories: accommodations_type[] = [
-      'HOTEL',
-      'HOSTEL',
-      'APARTMENT',
-      'RESORT',
-      'INN',
-      'MOTEL',
-      'GUESTHOUSE',
-      'VILLA',
-      'COTTAGE',
-      'CABIN',
-    ]
+  async searchByCep(cep: string): Promise<any[]> {
+    const sanitizedCep = this.sanitizeAndValidateCep(cep)
+    const coordinates = await this.getCoordinatesByZipCode(sanitizedCep)
 
-    if (!validCategories.includes(category as accommodations_type)) {
-      throw new InternalServerErrorException('Categoria inválida')
+    if (!coordinates) {
+      throw new InternalServerErrorException(
+        'Não foi possível obter coordenadas para o CEP.',
+      )
     }
 
-    return this.prisma.accommodations.findMany({
-      where: {
-        type: category as accommodations_type,
-      },
-      select: {
-        id: true,
-        name: true,
-        type: true,
-        city: true,
-        state: true,
-        description: true,
-        stars: true,
-        thumb: true,
-        amenities: true,
-      },
-    })
+    return this.findNearbyAccommodations(coordinates.lat, coordinates.lng)
   }
 
   async findNearbyAccommodations(
@@ -142,39 +109,6 @@ export class AccommodationsService {
     })
   }
 
-  async getCoordinatesByZipCode(
-    zipCode: string,
-  ): Promise<{ lat: number; lng: number }> {
-    try {
-      const response = await axios.get(
-        `https://api.opencagedata.com/geocode/v1/json?q=${zipCode}&key=${this.openCageApiKey}`,
-      )
-
-      const result = response.data.results[0]
-      if (result) {
-        return result.geometry
-      }
-
-      console.log('Tentando buscar com ViaCEP...')
-      const viaCepResponse = await axios.get(
-        `https://viacep.com.br/ws/${zipCode}/json/`,
-      )
-
-      const viaCepData = viaCepResponse.data
-      if (viaCepData.erro) {
-        throw new InternalServerErrorException(
-          'Não foi possível encontrar dados de localização para este CEP',
-        )
-      }
-
-      return { lat: 0, lng: 0 }
-    } catch (error) {
-      throw new InternalServerErrorException(
-        `Erro ao buscar coordenadas para o CEP ${zipCode}: ${error.message}`,
-      )
-    }
-  }
-
   private calculateDistance(
     lat1: number,
     lon1: number,
@@ -198,22 +132,19 @@ export class AccommodationsService {
     return deg * (Math.PI / 180)
   }
 
-  private calculateAverageRating(reviewsJson: unknown): number {
-    const reviews = this.parseJson(reviewsJson)
-
-    if (!Array.isArray(reviews) || reviews.length === 0) {
-      return 0
-    }
-
-    const total = reviews.reduce((sum, review) => sum + (review.rating || 0), 0)
-    return total / reviews.length
+  async findAll(): Promise<any[]> {
+    return this.prisma.accommodations.findMany()
   }
 
-  private parseJson(json: unknown): any {
-    try {
-      return typeof json === 'string' ? JSON.parse(json) : json
-    } catch {
-      return null
-    }
+  async searchByCategory(category: accommodations_type): Promise<any[]> {
+    return this.prisma.accommodations.findMany({
+      where: { type: category },
+    })
+  }
+
+  async findById(id: number): Promise<any> {
+    return this.prisma.accommodations.findUnique({
+      where: { id },
+    })
   }
 }

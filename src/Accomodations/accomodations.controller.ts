@@ -27,58 +27,76 @@ const VALID_CATEGORIES: accommodations_type[] = [
 export class AccommodationsController {
   constructor(private readonly accommodationsService: AccommodationsService) {}
 
-  @ApiOperation({ summary: 'Obter todas as acomodações' })
+  @ApiOperation({ summary: 'Buscar acomodações por CEP' })
   @ApiResponse({
     status: 200,
-    description: 'Acomodações encontradas com sucesso',
+    description: 'Acomodações encontradas por CEP',
+    type: Array,
   })
-  @ApiResponse({ status: 500, description: 'Erro ao listar acomodações' })
-  @Get()
-  async findAll() {
-    try {
-      return await this.accommodationsService.findAll()
-    } catch (error) {
-      console.error('Erro ao listar acomodações:', error.message)
-      throw new InternalServerErrorException('Erro ao listar acomodações')
-    }
-  }
+  @ApiResponse({ status: 400, description: 'CEP inválido' })
+  @ApiResponse({
+    status: 500,
+    description: 'Erro ao buscar acomodações por CEP',
+  })
+  @Get('search-by-cep')
+  async searchByCep(@Query('cep') cep: string) {
+    const cepPattern = /^\d{5}-?\d{3}$/
 
-  @ApiOperation({ summary: 'Buscar acomodações por categoria' })
-  @ApiResponse({ status: 200, description: 'Acomodações encontradas' })
-  @ApiResponse({ status: 400, description: 'Categoria inválida' })
-  @Get('search')
-  async searchByCategory(@Query('category') category: string) {
-    if (!VALID_CATEGORIES.includes(category as accommodations_type)) {
-      throw new BadRequestException('Categoria inválida')
-    }
-
-    try {
-      return await this.accommodationsService.searchByCategory(
-        category as accommodations_type,
+    if (!cepPattern.test(cep)) {
+      throw new BadRequestException(
+        'CEP inválido. Insira um CEP no formato "12345-678" ou "12345678".',
       )
+    }
+
+    try {
+      const accommodations = await this.accommodationsService.searchByCep(cep)
+
+      if (!accommodations || accommodations.length === 0) {
+        throw new BadRequestException(
+          'Nenhuma acomodação encontrada para o CEP fornecido.',
+        )
+      }
+
+      return accommodations
     } catch (error) {
-      console.error('Erro ao buscar por categoria:', error.message)
-      throw new InternalServerErrorException('Erro ao buscar por categoria')
+      console.error('Erro ao buscar acomodações por CEP:', error.message)
+      throw new InternalServerErrorException(
+        'Não foi possível buscar acomodações pelo CEP fornecido.',
+      )
     }
   }
 
   @ApiOperation({ summary: 'Buscar acomodações por ID' })
-  @ApiResponse({ status: 200, description: 'Acomodação encontrada' })
+  @ApiResponse({
+    status: 200,
+    description: 'Acomodação encontrada',
+    type: Object,
+  })
   @ApiResponse({ status: 400, description: 'ID inválido' })
   @ApiResponse({ status: 500, description: 'Erro ao buscar acomodação por ID' })
   @Get(':id')
   async findById(@Param('id') id: string) {
     const parsedId = parseInt(id, 10)
 
-    if (isNaN(parsedId)) {
-      throw new BadRequestException('ID inválido')
+    if (isNaN(parsedId) || parsedId <= 0) {
+      throw new BadRequestException(
+        'ID inválido. O ID deve ser um número positivo.',
+      )
     }
 
     try {
-      return await this.accommodationsService.findById(parsedId)
+      const accommodation = await this.accommodationsService.findById(parsedId)
+
+      if (!accommodation) {
+        throw new BadRequestException('Acomodação não encontrada.')
+      }
+
+      return accommodation
     } catch (error) {
       console.error('Erro ao buscar acomodação por ID:', error.message)
-      throw new InternalServerErrorException('Erro ao buscar acomodação por ID')
+      throw new InternalServerErrorException(
+        'Não foi possível buscar a acomodação pelo ID fornecido.',
+      )
     }
   }
 }
