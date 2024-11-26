@@ -9,7 +9,6 @@ export class AccommodationsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  // Método para encontrar todas as acomodações
   async findAll() {
     const accommodations = await this.prisma.accommodations.findMany({
       select: {
@@ -34,18 +33,10 @@ export class AccommodationsService {
       description: accommodation.description,
       stars: accommodation.stars,
       image: accommodation.thumb,
-<<<<<<< HEAD
-      amenities:
-        typeof accommodation.amenities === 'string'
-          ? JSON.parse(accommodation.amenities) // Parse somente se for uma string
-          : accommodation.amenities, // Caso já seja um objeto JSON, não é necessário parsear
-=======
       amenities: this.parseJson(accommodation.amenities),
->>>>>>> c5dd6925d5df9b1c62106b075e48bf242e911966
     }))
   }
 
-  // Método para encontrar uma acomodação pelo ID
   async findById(id: number) {
     const accommodation = await this.prisma.accommodations.findUnique({
       where: { id },
@@ -74,17 +65,10 @@ export class AccommodationsService {
       type: accommodation.type,
       description: accommodation.description,
       image: accommodation.thumb,
-      amenities:
-        typeof accommodation.amenities === 'string'
-          ? JSON.parse(accommodation.amenities) // Parse somente se for uma string
-          : accommodation.amenities, // Caso já seja um objeto JSON, não é necessário parsear
+      amenities: this.parseJson(accommodation.amenities),
     }
   }
 
-<<<<<<< HEAD
-  // Método para buscar acomodações por categoria
-  async searchByCategory(category: string) {
-=======
   async searchByCategory(category: string): Promise<any[]> {
     const validCategories: accommodations_type[] = [
       'HOTEL',
@@ -103,7 +87,6 @@ export class AccommodationsService {
       throw new InternalServerErrorException('Categoria inválida')
     }
 
->>>>>>> c5dd6925d5df9b1c62106b075e48bf242e911966
     return this.prisma.accommodations.findMany({
       where: {
         type: category as accommodations_type,
@@ -121,8 +104,6 @@ export class AccommodationsService {
       },
     })
   }
-<<<<<<< HEAD
-=======
 
   async findNearbyAccommodations(
     lat: number,
@@ -200,7 +181,7 @@ export class AccommodationsService {
     lat2: number,
     lon2: number,
   ): number {
-    const R = 6371 
+    const R = 6371
     const dLat = this.degToRad(lat2 - lat1)
     const dLon = this.degToRad(lon2 - lon1)
     const a =
@@ -210,7 +191,7 @@ export class AccommodationsService {
         Math.sin(dLon / 2) *
         Math.sin(dLon / 2)
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    return R * c 
+    return R * c
   }
 
   private degToRad(deg: number): number {
@@ -235,5 +216,4 @@ export class AccommodationsService {
       return null
     }
   }
->>>>>>> c5dd6925d5df9b1c62106b075e48bf242e911966
 }

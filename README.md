@@ -1,3 +1,7 @@
+Aqui está o conteúdo atualizado com a adição do Swagger no seu README:
+
+---
+
 # Hackaton API - Onfly Challenge
 
 Este projeto foi desenvolvido como uma solução para um desafio da Onfly, com o objetivo de criar um filtro eficiente para categorias de acomodações. A API permite gerenciar acomodações e oferece funcionalidades como listagem, busca por categorias e localização.
@@ -34,6 +38,7 @@ Essa abordagem garante que os usuários possam filtrar acomodações com rapidez
 - **Axios**: Realiza integrações com APIs externas, como a geolocalização baseada em CEP.
 - **ViaCEP**: API utilizada para obter dados de localização com base no CEP.
 - **OpenCage**: API utilizada para realizar geocodificação baseada em CEP, fornecendo informações detalhadas sobre a localização.
+- **Swagger**: Documentação interativa da API, permitindo que os desenvolvedores testem os endpoints diretamente na interface.
 
 ---
 
@@ -46,6 +51,7 @@ Essa abordagem garante que os usuários possam filtrar acomodações com rapidez
 - **ViaCEP**: Utilizada para recuperar dados de endereço a partir do CEP fornecido de forma eficiente.
 - **OpenCage**: Utilizada para enriquecer a busca com dados de geolocalização e informações adicionais sobre o endereço.
 - **Docker**: Gerou containers para a aplicação e o banco de dados, criando um ambiente padronizado para desenvolvimento e produção.
+- **Swagger**: Utilizado para gerar uma documentação interativa da API, onde é possível visualizar e testar os endpoints de maneira fácil.
 
 ---
 
@@ -141,6 +147,12 @@ Se estiver rodando localmente, a aplicação estará disponível em:
 http://localhost:3333
 ```
 
+A documentação interativa do Swagger estará disponível em:
+
+```text
+http://localhost:3333/api
+```
+
 ---
 
 ## Dependências do Projeto
@@ -150,6 +162,7 @@ http://localhost:3333
 - **dotenv**: Gerenciamento de variáveis de ambiente.
 - **axios**: Requisições HTTP.
 - **rxjs**: Programação reativa.
+- **swagger-ui-express**: Utilizado para gerar a documentação interativa da API.
 
 **Dependências de Desenvolvimento**:
 
