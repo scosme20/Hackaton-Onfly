@@ -5,15 +5,13 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
 
-  // Habilitar CORS
   app.enableCors({
-    origin: '*', // Permite todas as origens. Em produção, especifique as origens permitidas.
+    origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Accept, Authorization',
-    credentials: true, // Habilitar cookies/sessão compartilhada
+    credentials: true,
   })
 
-  // Configuração do Swagger
   const config = new DocumentBuilder()
     .setTitle('Accommodations API')
     .setDescription('API para gerenciar acomodações')
