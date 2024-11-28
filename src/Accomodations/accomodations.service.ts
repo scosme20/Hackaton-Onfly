@@ -79,6 +79,8 @@ export class AccommodationsService {
   ): Promise<any[]> {
     const accommodations = await this.prisma.accommodations.findMany({
       select: {
+        name: true,
+        stars: true,
         id: true,
         city: true,
         state: true,
